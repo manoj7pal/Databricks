@@ -2,11 +2,13 @@
 # MAGIC %md
 # MAGIC 
 # MAGIC #### 4 Utilities:
-# MAGIC * DB Filesystem Utilities
-# MAGIC * Notebook Utilities
-# MAGIC * Widgets Utilities
-# MAGIC * Secret Utilities
-# MAGIC * Library Utilities
+# MAGIC * DB Filesystem Utilities : dbutils.
+# MAGIC * Notebook Utilities: dbutils.notebook.
+# MAGIC * Widgets Utilities: dbutils.widgets.
+# MAGIC * Secret Utilities: 
+# MAGIC * Library Utilities: %pip install .....
+# MAGIC 
+# MAGIC ######  Help: dbutils.fs.help(), dbutils.notebook.help("<function_name>"), dbutils.widgets.help() and so on
 
 # COMMAND ----------
 
