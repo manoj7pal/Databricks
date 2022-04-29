@@ -48,9 +48,27 @@ race_final_df = race_renamed_df.withColumn("ingestion_date", current_timestamp()
 # COMMAND ----------
 
 # Write file back to ADLS, as a parquet file
-path = "/mnt/formula1projectstorage/processed/races/"
 
+path = "/mnt/formula1projectstorage/processed/races/"
 race_final_df.write.parquet(path, mode="overwrite")
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC 
+# MAGIC #### Partition the data while writing to ADLS
+
+# COMMAND ----------
+
+# Write file back to ADLS, as a parquet file, and parition it by race_year
+# Partition-at-rest --> race_year
+
+path = "/mnt/formula1projectstorage/processed/races_partition/"
+race_final_df.write.partitionBy('race_year').parquet(path, mode="overwrite")
+
+# COMMAND ----------
+
+display(spark.read.parquet(path))
 
 # COMMAND ----------
 
