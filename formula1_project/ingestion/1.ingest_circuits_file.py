@@ -156,4 +156,6 @@ display(df)
 
 # COMMAND ----------
 
-dbutils.notebook.exit("Success")
+notebook_name = dbutils.notebook.entry_point.getDbutils().notebook().getContext().notebookPath().get()
+
+dbutils.notebook.exit(f"{notebook_name}: Success")
