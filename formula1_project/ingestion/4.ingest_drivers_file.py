@@ -4,6 +4,23 @@
 
 # COMMAND ----------
 
+# MAGIC %run "../includes/configuration"
+
+# COMMAND ----------
+
+# MAGIC %run "../includes/common_functions"
+
+# COMMAND ----------
+
+# Adding widgets to pass runtime notebook parameters
+dbutils.widgets.text("p_datasource", "constructors")
+v_datasource = dbutils.widgets.get("p_datasource")
+
+dbutils.widgets.text("p_env", "Development")
+v_env = dbutils.widgets.get("p_env")
+
+# COMMAND ----------
+
 # MAGIC %md
 # MAGIC 
 # MAGIC ##### Step1 - Read the JSON file using the spark dataframe reader API
@@ -33,7 +50,10 @@ driver_schema = StructType(fields =
 
 # COMMAND ----------
 
-drivers_df = spark.read.json("/mnt/formula1projectstorage/raw/drivers.json", schema = driver_schema)
+file_name = "drivers.json"
+path = f"{raw_dir_path}/{file_name}"
+
+drivers_df = spark.read.json(path, schema = driver_schema)
 
 # COMMAND ----------
 
@@ -52,10 +72,14 @@ from pyspark.sql.functions import col, current_timestamp, lit, concat
 
 # COMMAND ----------
 
-drivers_renamed_df = drivers_df.withColumnRenamed("driverId", "driver_id")\
+drivers_renamed_df = add_ingestion_date(drivers_df)\
+                        .withColumnRenamed("driverId", "driver_id")\
                         .withColumnRenamed("driverRef", "driver_ref")\
-                        .withColumn("ingestion_date", current_timestamp())\
-                        .withColumn("name", concat(col("name.forename"), lit(" ") , col("name.surname")) )
+                        .withColumn("name", concat(col("name.forename"), lit(" ") , col("name.surname")) )\
+                        .withColumn("datasource", lit(v_datasource))\
+                        .withColumn("environment", lit(v_env)) 
+
+#                         .withColumn("ingestion_date", current_timestamp())\
 
 # COMMAND ----------
 
@@ -76,9 +100,16 @@ drivers_final_df = drivers_renamed_df.drop(col("url"))
 
 # COMMAND ----------
 
-processed_path = "/mnt/formula1projectstorage/processed/drivers"
+processed_path = f"{processed_dir_path}/drivers"
 drivers_final_df.write.parquet(path=processed_path, mode="overwrite")
 
 # COMMAND ----------
 
 # display(spark.read.parquet(proicessed_path))
+
+
+# COMMAND ----------
+
+notebook_name = dbutils.notebook.entry_point.getDbutils().notebook().getContext().notebookPath().get()
+
+dbutils.notebook.exit(f"{notebook_name}: Success")
