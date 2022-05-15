@@ -9,6 +9,23 @@
 
 # COMMAND ----------
 
+# MAGIC %run "../includes/configuration"
+
+# COMMAND ----------
+
+# MAGIC %run "../includes/common_functions"
+
+# COMMAND ----------
+
+# Adding widgets to pass runtime notebook parameters
+dbutils.widgets.text("p_datasource", "constructors")
+v_datasource = dbutils.widgets.get("p_datasource")
+
+dbutils.widgets.text("p_env", "Development")
+v_env = dbutils.widgets.get("p_env")
+
+# COMMAND ----------
+
 # MAGIC %md
 # MAGIC 
 # MAGIC ##### Step1 - Read the JSON files in the qualifying folder, using the spark dataframe reader API
@@ -33,10 +50,10 @@ qualify_schema = StructType(fields=[
 
 # COMMAND ----------
 
-raw_path = "/mnt/formula1projectstorage/raw/qualifying/"
 file_name = "qualifying_split_*.json"
+path = f"{raw_dir_path}/qualifying/{file_name}"
 
-qualifying_df = spark.read.json(path=f"{raw_path}{file_name}", schema=qualify_schema, multiLine=True)
+qualifying_df = spark.read.json(path=path, schema=qualify_schema, multiLine=True)
 
 # COMMAND ----------
 
@@ -53,13 +70,17 @@ qualifying_df.count()
 
 # COMMAND ----------
 
-from pyspark.sql.functions import current_timestamp
+from pyspark.sql.functions import current_timestamp, lit
 
-qualifying_final_df = qualifying_df.withColumnRenamed("qualifyingId", "qualifying_id")\
-                              .withColumnRenamed("driverId", "driver_id")\
-                              .withColumnRenamed("raceId", "race_id")\
-                              .withColumnRenamed("constructorId", "constructor_id")\
-                              .withColumn("ingestion_date", current_timestamp())      
+qualifying_final_df = add_ingestion_date(qualifying_df)\
+                            .withColumnRenamed("qualifyingId", "qualifying_id")\
+                            .withColumnRenamed("driverId", "driver_id")\
+                            .withColumnRenamed("raceId", "race_id")\
+                            .withColumnRenamed("constructorId", "constructor_id")\
+                            .withColumn("datasource", lit(v_datasource))\
+                            .withColumn("environment", lit(v_env)) 
+
+#                               .withColumn("ingestion_date", current_timestamp())      
 
 # COMMAND ----------
 
@@ -68,7 +89,7 @@ qualifying_final_df = qualifying_df.withColumnRenamed("qualifyingId", "qualifyin
 
 # COMMAND ----------
 
-processed_path = "/mnt/formula1projectstorage/processed/qualifying/"
+processed_path = f"{processed_dir_path}/qualifying/"
 
 qualifying_final_df.write.parquet(path=processed_path, mode="overwrite")
 
@@ -78,3 +99,6 @@ display(spark.read.parquet(processed_path, multiLine=True))
 
 # COMMAND ----------
 
+notebook_name = dbutils.notebook.entry_point.getDbutils().notebook().getContext().notebookPath().get()
+
+dbutils.notebook.exit(f"{notebook_name}: Success")
