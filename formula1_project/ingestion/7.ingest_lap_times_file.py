@@ -8,6 +8,23 @@
 
 # COMMAND ----------
 
+# MAGIC %run "../includes/configuration"
+
+# COMMAND ----------
+
+# MAGIC %run "../includes/common_functions"
+
+# COMMAND ----------
+
+# Adding widgets to pass runtime notebook parameters
+dbutils.widgets.text("p_datasource", "constructors")
+v_datasource = dbutils.widgets.get("p_datasource")
+
+dbutils.widgets.text("p_env", "Development")
+v_env = dbutils.widgets.get("p_env")
+
+# COMMAND ----------
+
 # MAGIC %md
 # MAGIC 
 # MAGIC ##### Step1 - Read the CSV files in the lap_times folder, using the spark dataframe reader API
@@ -29,10 +46,10 @@ lap_times_schema = StructType(fields=[
 
 # COMMAND ----------
 
-raw_path = "/mnt/formula1projectstorage/raw/lap_times/"
 file_name = "lap_times*.csv"
+path = f"{raw_dir_path}/lap_times/{file_name}"
 
-lap_times_df = spark.read.csv(path=f"{raw_path}{file_name}", schema=lap_times_schema)
+lap_times_df = spark.read.csv(path=path, schema=lap_times_schema)
 
 # COMMAND ----------
 
@@ -49,11 +66,15 @@ lap_times_df.count()
 
 # COMMAND ----------
 
-from pyspark.sql.functions import current_timestamp
+from pyspark.sql.functions import current_timestamp, lit
 
-lap_times_final_df = lap_times_df.withColumnRenamed("driverId", "driver_id")\
-                              .withColumnRenamed("raceId", "race_id")\
-                              .withColumn("ingestion_date", current_timestamp())      
+lap_times_final_df = add_ingestion_date(lap_times_df)\
+                                .withColumnRenamed("driverId", "driver_id")\
+                                .withColumnRenamed("raceId", "race_id")\
+                                .withColumn("datasource", lit(v_datasource))\
+                                .withColumn("environment", lit(v_env)) 
+
+#                                 .withColumn("ingestion_date", current_timestamp())      
 
 # COMMAND ----------
 
@@ -62,10 +83,16 @@ lap_times_final_df = lap_times_df.withColumnRenamed("driverId", "driver_id")\
 
 # COMMAND ----------
 
-processed_path = "/mnt/formula1projectstorage/processed/lap_times/"
+processed_path = f"{processed_dir_path}/lap_times/"
 
 lap_times_final_df.write.parquet(path=processed_path, mode="overwrite")
 
 # COMMAND ----------
 
 # display(spark.read.parquet(processed_path))
+
+# COMMAND ----------
+
+notebook_name = dbutils.notebook.entry_point.getDbutils().notebook().getContext().notebookPath().get()
+
+dbutils.notebook.exit(f"{notebook_name}: Success")
