@@ -7,6 +7,23 @@
 
 # COMMAND ----------
 
+# MAGIC %run "../includes/configuration"
+
+# COMMAND ----------
+
+# MAGIC %run "../includes/common_functions"
+
+# COMMAND ----------
+
+# Adding widgets to pass runtime notebook parameters
+dbutils.widgets.text("p_datasource", "constructors")
+v_datasource = dbutils.widgets.get("p_datasource")
+
+dbutils.widgets.text("p_env", "Development")
+v_env = dbutils.widgets.get("p_env")
+
+# COMMAND ----------
+
 from pyspark.sql.types import StructType, StructField, IntegerType, StringType, FloatType
 
 # COMMAND ----------
@@ -33,7 +50,10 @@ results_schema = StructType(fields=[
 
 # COMMAND ----------
 
-results_df = spark.read.json(path ="/mnt/formula1projectstorage/raw/results.json", schema=results_schema)
+file_name = "results.json"
+path = f"{raw_dir_path}/{file_name}"
+
+results_df = spark.read.json(path=path, schema=results_schema)
 
 # COMMAND ----------
 
@@ -47,9 +67,10 @@ results_df = spark.read.json(path ="/mnt/formula1projectstorage/raw/results.json
 
 # COMMAND ----------
 
-from pyspark.sql.functions import current_timestamp
+from pyspark.sql.functions import current_timestamp, lit
 
-results_renamed_df = results_df.withColumnRenamed("resultId", "result_id")\
+results_renamed_df = add_ingestion_date(results_df)\
+                                .withColumnRenamed("resultId", "result_id")\
                                 .withColumnRenamed("raceId", "race_id")\
                                 .withColumnRenamed("resultId", "result_id")\
                                 .withColumnRenamed("driverId", "driver_id")\
@@ -59,7 +80,10 @@ results_renamed_df = results_df.withColumnRenamed("resultId", "result_id")\
                                 .withColumnRenamed("fastestLap", "fastest_lap")\
                                 .withColumnRenamed("fastestLapTime", "fastest_lap_time")\
                                 .withColumnRenamed("fastestLapSpeed", "fastest_lap_speed")\
-                                .withColumn("ingestion_date", current_timestamp())
+                                .withColumn("datasource", lit(v_datasource))\
+                                .withColumn("environment", lit(v_env)) 
+                                
+# .withColumn("ingestion_date", current_timestamp())
 
 # COMMAND ----------
 
@@ -72,10 +96,17 @@ results_final_df = results_renamed_df.drop("statusId")
 
 # COMMAND ----------
 
-processed_path = "/mnt/formula1projectstorage/processed/results"
+processed_path = f"{processed_dir_path}/results"
+
 results_final_df.write.parquet(path=processed_path, mode="overwrite", partitionBy="race_id")
 
 # COMMAND ----------
 
 #Displaying on Race_ID=1 results
 # display(spark.read.parquet(f"{processed_path}/race_id=1/"))
+
+# COMMAND ----------
+
+notebook_name = dbutils.notebook.entry_point.getDbutils().notebook().getContext().notebookPath().get()
+
+dbutils.notebook.exit(f"{notebook_name}: Success")
