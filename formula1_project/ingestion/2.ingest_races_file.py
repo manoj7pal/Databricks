@@ -1,4 +1,21 @@
 # Databricks notebook source
+# MAGIC %run "../includes/configuration"
+
+# COMMAND ----------
+
+# MAGIC %run "../includes/common_functions"
+
+# COMMAND ----------
+
+# Adding widgets to pass runtime notebook parameters
+dbutils.widgets.text("p_datasource", "")
+v_datasource = dbutils.widgets.get("p_datasource")
+
+dbutils.widgets.text("p_env", "")
+v_env = dbutils.widgets.get("p_env")
+
+# COMMAND ----------
+
 # Define the schema
 from pyspark.sql.types import StructType, StructField, StringType, IntegerType, DateType, TimestampType
 
@@ -18,9 +35,10 @@ race_schema = StructType(fields=[
 
 # Load the file with the above schema
 file_name = "races.csv"
-path = "/mnt/formula1projectstorage/raw/"
+# path = "/mnt/formula1projectstorage/raw/"
 
-race_df = spark.read.csv(path+file_name, header=True, schema=race_schema)
+
+race_df = spark.read.csv(f"{raw_dir_path}/{file_name}", header=True, schema=race_schema)
 # display(race_df)
 
 # COMMAND ----------
@@ -42,15 +60,22 @@ race_renamed_df = race_selected_df.withColumnRenamed("raceid", "race_id")\
 # Add new columns
 from pyspark.sql.functions import current_timestamp, lit, to_timestamp, concat, col
 
-race_final_df = race_renamed_df.withColumn("ingestion_date", current_timestamp())\
-    .withColumn("race_timestamp", to_timestamp( concat( col("date"),lit(""),col("time") ), "yyyy-MM-ddHH:mm:ss") )
+# race_final_df = race_renamed_df.withColumn("ingestion_date", current_timestamp())\
+#     .withColumn("race_timestamp", to_timestamp( concat( col("date"),lit(""),col("time") ), "yyyy-MM-ddHH:mm:ss") )
+
+race_final_df = add_ingestion_date(race_renamed_df)\
+                .withColumn("race_timestamp", to_timestamp( concat( col("date"),lit(""),col("time") ), "yyyy-MM-ddHH:mm:ss") )\
+                .withColumn("datasource", lit(v_datasource))\
+                .withColumn("environment", lit(v_env))
 
 # COMMAND ----------
 
 # Write file back to ADLS, as a parquet file
 
-path = "/mnt/formula1projectstorage/processed/races/"
-race_final_df.write.parquet(path, mode="overwrite")
+# path = "/mnt/formula1projectstorage/processed/races/"
+# path = f"{processed_dir_path}/races"
+
+# race_final_df.write.parquet(path, mode="overwrite")
 
 # COMMAND ----------
 
@@ -63,8 +88,10 @@ race_final_df.write.parquet(path, mode="overwrite")
 # Write file back to ADLS, as a parquet file, and parition it by race_year
 # Partition-at-rest --> race_year
 
-path = "/mnt/formula1projectstorage/processed/races_partition/"
-race_final_df.write.partitionBy('race_year').parquet(path, mode="overwrite")
+# path = "/mnt/formula1projectstorage/processed/races_partition/"
+path = f"{processed_dir_path}/races_partition"
+
+race_final_df.write.parquet(path, mode="overwrite", partitionBy="race_year")
 
 # COMMAND ----------
 
@@ -74,3 +101,7 @@ display(spark.read.parquet(path))
 
 # display(race_newcol_df)
 # race_df.printSchema()
+
+# COMMAND ----------
+
+dbutils.notebook.exit("Success")
