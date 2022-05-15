@@ -4,7 +4,7 @@
 # MAGIC 
 # MAGIC ```
 # MAGIC  - Multiple multi-line .json files in a folder
-# MAGIC  - multiLine = True, wjhile loading the CSV files.
+# MAGIC  - multiLine = True, wjhile loading the CSV files. 
 # MAGIC ```
 
 # COMMAND ----------
