@@ -5,6 +5,23 @@
 
 # COMMAND ----------
 
+# MAGIC %run "../includes/configuration"
+
+# COMMAND ----------
+
+# MAGIC %run "../includes/common_functions"
+
+# COMMAND ----------
+
+# Adding widgets to pass runtime notebook parameters
+dbutils.widgets.text("p_datasource", "constructors")
+v_datasource = dbutils.widgets.get("p_datasource")
+
+dbutils.widgets.text("p_env", "Development")
+v_env = dbutils.widgets.get("p_env")
+
+# COMMAND ----------
+
 # MAGIC %md
 # MAGIC ##### Step1 - Read the JSON file using the spark dataframe reader
 
@@ -13,7 +30,8 @@
 # DDL Type Schema
 constructor_schema = "constructorId INT, constructorRef STRING, name STRING, nationality STRING, url STRING"
 
-constructor_df = spark.read.json(path = "/mnt/formula1projectstorage/raw/constructors.json", schema = constructor_schema)
+path = f"{raw_dir_path}/constructors.json"
+constructor_df = spark.read.json(path = path, schema = constructor_schema)
 
 # COMMAND ----------
 
@@ -37,11 +55,15 @@ constructor_dropped_df = constructor_df.drop('url')
 
 # COMMAND ----------
 
-from pyspark.sql.functions import current_timestamp
+from pyspark.sql.functions import current_timestamp, lit
 
-constructor_final_df = constructor_dropped_df.withColumnRenamed('constructorId', 'constructor_id')\
-    .withColumnRenamed('constructorRef', 'constructor_ref')\
-    .withColumn('ingestion_date', current_timestamp())
+constructor_final_df = add_ingestion_date(constructor_dropped_df)\
+                        .withColumnRenamed('constructorId', 'constructor_id')\
+                        .withColumnRenamed('constructorRef', 'constructor_ref')\
+                        .withColumn("datasource", lit(v_datasource))\
+                        .withColumn("environment", lit(v_env))    
+
+#     .withColumn('ingestion_date', current_timestamp())
 
 # COMMAND ----------
 
@@ -50,7 +72,7 @@ constructor_final_df = constructor_dropped_df.withColumnRenamed('constructorId',
 
 # COMMAND ----------
 
-path = "/mnt/formula1projectstorage/processed/constructors/"
+path = f"{processed_dir_path}/constructors/"
 constructor_final_df.write.parquet(path, mode='overwrite')
 
 # COMMAND ----------
@@ -59,3 +81,9 @@ constructor_final_df.write.parquet(path, mode='overwrite')
 # display(constructor_df.printSchema())    
 # display(constructor_final_df)
 # display(dbutils.fs.ls(path))
+
+# COMMAND ----------
+
+notebook_name = dbutils.notebook.entry_point.getDbutils().notebook().getContext().notebookPath().get()
+
+dbutils.notebook.exit(f"{notebook_name}: Success")
