@@ -74,7 +74,7 @@ qualifying_final_df.write.parquet(path=processed_path, mode="overwrite")
 
 # COMMAND ----------
 
-# display(spark.read.parquet(processed_path))
+display(spark.read.parquet(processed_path, multiLine=True))
 
 # COMMAND ----------
 
