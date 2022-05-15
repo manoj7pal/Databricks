@@ -8,6 +8,23 @@
 
 # COMMAND ----------
 
+# MAGIC %run "../includes/configuration"
+
+# COMMAND ----------
+
+# MAGIC %run "../includes/common_functions"
+
+# COMMAND ----------
+
+# Adding widgets to pass runtime notebook parameters
+dbutils.widgets.text("p_datasource", "constructors")
+v_datasource = dbutils.widgets.get("p_datasource")
+
+dbutils.widgets.text("p_env", "Development")
+v_env = dbutils.widgets.get("p_env")
+
+# COMMAND ----------
+
 # MAGIC %md
 # MAGIC 
 # MAGIC ##### Step1 - Read the JSON file using the spark dataframe reader API
@@ -30,10 +47,10 @@ pit_stops_schema = StructType(fields=[
 
 # COMMAND ----------
 
-raw_path = "/mnt/formula1projectstorage/raw/"
 file_name = "pit_stops.json"
+path = f"{raw_dir_path}/{file_name}"
 
-pit_stops_df = spark.read.json(path=f"{raw_path}{file_name}", schema=pit_stops_schema, multiLine=True )
+pit_stops_df = spark.read.json(path=path, schema=pit_stops_schema, multiLine=True )
 
 # COMMAND ----------
 
@@ -46,11 +63,16 @@ pit_stops_df = spark.read.json(path=f"{raw_path}{file_name}", schema=pit_stops_s
 
 # COMMAND ----------
 
-from pyspark.sql.functions import current_timestamp
+from pyspark.sql.functions import current_timestamp, lit
 
-pit_stops_final_df = pit_stops_df.withColumnRenamed("driverId", "driver_id")\
-                              .withColumnRenamed("raceId", "race_id")\
-                              .withColumn("ingestion_date", current_timestamp())      
+pit_stops_final_df = add_ingestion_date(pit_stops_df)\
+                                .withColumnRenamed("driverId", "driver_id")\
+                                .withColumnRenamed("raceId", "race_id")\
+                                .withColumn("datasource", lit(v_datasource))\
+                                .withColumn("environment", lit(v_env)) 
+
+
+#                                 .withColumn("ingestion_date", current_timestamp())      
 
 # COMMAND ----------
 
@@ -59,10 +81,16 @@ pit_stops_final_df = pit_stops_df.withColumnRenamed("driverId", "driver_id")\
 
 # COMMAND ----------
 
-processed_path = "/mnt/formula1projectstorage/processed/pit_stops/"
+processed_path = f"{processed_dir_path}/pit_stops/"
 
 pit_stops_final_df.write.parquet(path=processed_path, mode="overwrite")
 
 # COMMAND ----------
 
 # display(spark.read.parquet(processed_path))
+
+# COMMAND ----------
+
+notebook_name = dbutils.notebook.entry_point.getDbutils().notebook().getContext().notebookPath().get()
+
+dbutils.notebook.exit(f"{notebook_name}: Success")
