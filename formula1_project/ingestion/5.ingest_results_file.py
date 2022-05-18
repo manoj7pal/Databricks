@@ -34,6 +34,7 @@ results_schema = StructType(fields=[
                                 StructField("driverId",IntegerType(), nullable=True),
                                 StructField("constructorId",IntegerType(), nullable=True),
                                 StructField("number", IntegerType(), nullable=True),
+                                StructField("grid", IntegerType(), nullable=True),
                                 StructField("position", IntegerType(), nullable=True),
                                 StructField("positionText", StringType(), nullable=True),
                                 StructField("positionOrder", IntegerType(), nullable=True),
