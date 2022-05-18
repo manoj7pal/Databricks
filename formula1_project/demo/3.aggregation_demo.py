@@ -84,3 +84,35 @@ df_2020.groupBy('driver_name')\
         .agg( sum("points").alias("total_points"), countDistinct("race_name").alias("no_of_races") )\
         .orderBy( desc("total_points") )\
         .show()
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ##### Window Functions
+
+# COMMAND ----------
+
+df = race_results_df.where( "race_year in (2019, 2020)" )
+display(df)
+
+# COMMAND ----------
+
+df.groupBy("race_year", "driver_name")\
+    .agg( sum("points").alias("total_points"), countDistinct("race_name").alias("no_of_races") )\
+    .orderBy("race_year", desc("total_points"))\
+    .show(100)
+    
+
+# COMMAND ----------
+
+from pyspark.sql.window import Window
+from pyspark.sql.functions import rank
+
+# COMMAND ----------
+
+# driverRankSpecs = Window.partitionBy("race_year").orderBy( desc("total_points") )
+
+df.groupBy("race_year", "driver_name")\
+    .agg( sum("points").alias("total_points"), countDistinct("race_name").alias("no_of_races") )\
+    .withColumn("rank", rank().over( Window.partitionBy("race_year").orderBy(desc("total_points")) ) )\
+    .show(50)
